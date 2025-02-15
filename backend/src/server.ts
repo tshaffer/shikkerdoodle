@@ -1,11 +1,19 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
 import session from 'express-session';
-import cookieParser from 'cookie-parser'; // Parse cookies
+import passport from 'passport';
+import bodyParser from 'body-parser';
+import { Strategy as GoogleOAuthStrategy } from 'passport-google-oauth20';
+const fetch = require('node-fetch');
 import dotenv from 'dotenv';
-import path from 'path';
-import { Server } from 'http';
-import cors from 'cors';
-const bodyParser = require('body-parser');
+
+declare global {
+  namespace Express {
+    interface User {
+      profile: any;
+      token: string;
+    }
+  }
+}
 
 dotenv.config(); // Load environment variables
 
@@ -13,39 +21,122 @@ dotenv.config(); // Load environment variables
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-app.use(cookieParser());
-app.use(express.json()); // Parse JSON requests
-app.use(cors());
+// Middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// === Express Session Setup ===
+// Session middleware
 app.use(
   session({
-    secret: process.env.SESSION_SECRET as string,
+    secret: process.env.SESSION_SECRET || 'shikkerdoodle-secret',
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 }, // 1 day
   })
 );
 
-// === Routes ===
+app.use(passport.initialize());
+app.use(passport.session());
 
-// Serve static files from the /public directory
-app.use(express.static(path.join(__dirname, '../public')));
+// Google OAuth Strategy
+const GOOGLE_SCOPES = [
+  "profile",
+  "https://www.googleapis.com/auth/photospicker.mediaitems.readonly"
+];
 
-// Serve the SPA on the root route (index.html)
-app.get('/', (req: Request, res: Response) => {
-  res.sendFile(path.join(__dirname, '../public', 'index.html'));
+passport.use(
+  new GoogleOAuthStrategy(
+    {
+      clientID: process.env.GOOGLE_CLIENT_ID || '',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+      callbackURL: process.env.GOOGLE_CALLBACK_URL || '/auth/google/callback',
+      scope: GOOGLE_SCOPES,
+    },
+    (token: string, refreshToken: string, profile: any, done) => {
+      const user = { profile, token };
+      return done(null, user);
+    }
+  )
+);
+
+passport.serializeUser((user, done) => done(null, user));
+passport.deserializeUser((user: Express.User, done) => done(null, user));
+
+// Authentication Routes
+app.get('/auth/google',
+  passport.authenticate('google', { scope: GOOGLE_SCOPES })
+);
+
+app.get('/auth/google/callback',
+  passport.authenticate('google', { failureRedirect: '/', scope: GOOGLE_SCOPES }),
+  (req, res) => {
+    res.redirect('/');
+  }
+);
+
+// Logout
+app.post('/api/logout', (req, res) => {
+  req.logout((err) => {
+    if (err) {
+      return res.status(500).json({ error: 'Logout failed' });
+    }
+    req.session.destroy(() => {
+      res.json({ message: 'Logged out' });
+    });
+  });
 });
 
-// Start the server
-const server: Server<any> = app.listen(PORT, () => {
-  console.log(`Server is running at http://localhost:${PORT}`);
+// Get User Info
+app.get('/api/user', (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  res.json(req.user);
 });
 
-process.on('unhandledRejection', (err: any, promise: any) => {
-  console.log(`Error: ${err.message}`);
-  // Close server and exit process
-  server.close(() => process.exit(1));
+// Create Photo Picker Session
+app.get('/api/session', async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  try {
+    const response = await fetch('https://photospicker.googleapis.com/v1/sessions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${(req.user as any).token}`,
+      },
+    });
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create session' });
+  }
 });
+
+// Fetch Selected Images
+app.get('/api/images', async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  try {
+    const response = await fetch(`https://photospicker.googleapis.com/v1/mediaItems`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${(req.user as any).token}`,
+      },
+    });
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch images' });
+  }
+});
+
+// Start Server
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
+
