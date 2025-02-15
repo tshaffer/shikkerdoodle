@@ -1,13 +1,23 @@
 import { useEffect, useState } from "react";
 
+interface MediaFile {
+  baseUrl: string;
+  filename: string;
+  mediaFileMetadata: any;
+  mimeType: string;
+}
+
 interface MediaItem {
   id: string;
+  createTime: string;
+  mediaFile: MediaFile;
+  type: string;
   baseUrl: string;
   mimeType: string;
 }
 
 const ImageList = () => {
-  const [images, setImages] = useState<MediaItem[]>([]);
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,10 +32,14 @@ const ImageList = () => {
       const response = await fetch("/api/images", { credentials: "include" });
       const data = await response.json();
 
+
       if (data.error) {
         setError("Failed to fetch images. Try selecting photos again.");
       } else if (data.mediaItems) {
-        setImages(data.mediaItems);
+        setMediaItems(data.mediaItems);
+        console.log('MediaItems:');
+        console.log(data.mediaItems);
+        debugger;
       } else {
         setError("No images found. Try selecting photos again.");
       }
@@ -43,14 +57,19 @@ const ImageList = () => {
       {error && <p className="text-red-500">{error}</p>}
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {images.map((image) => (
-          <img
-            key={image.id}
-            src={`${image.baseUrl}=w300`}
-            alt="Selected"
-            className="w-full h-auto rounded-lg shadow-md"
-          />
-        ))}
+        {mediaItems.map((mediaItem) => {
+          console.log(mediaItem);
+          console.log(mediaItem.mediaFile);
+          return (
+            <img
+              key={mediaItem.id}
+              src={`${mediaItem.mediaFile.baseUrl}=w300`}
+              alt="Selected"
+              className="w-full h-auto rounded-lg shadow-md"
+            />
+          )
+        }
+        )}
       </div>
 
       <button
