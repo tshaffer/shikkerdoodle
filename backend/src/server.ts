@@ -102,16 +102,30 @@ app.get('/api/session', async (req, res) => {
   }
 
   try {
-    const response = await fetch('https://photospicker.googleapis.com/v1/sessions', {
+    // Create a new session
+    const sessionResponse = await fetch('https://photospicker.googleapis.com/v1/sessions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${(req.user as any).token}`,
       },
     });
-    const data = await response.json();
-    res.json(data);
+
+    const sessionData = await sessionResponse.json();
+
+    if (!sessionData.id) {
+      return res.status(400).json({ error: 'Failed to create a valid session ID' });
+    }
+
+    // Construct the Picker UI URL
+    const pickerUrl = `https://photos.google.com/picker/${sessionData.id}`;
+
+    res.json({
+      message: 'Session created. Please visit the following URL to select media:',
+      pickerUrl,
+    });
   } catch (error) {
+    console.error('Error creating session:', error);
     res.status(500).json({ error: 'Failed to create session' });
   }
 });
