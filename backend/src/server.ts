@@ -96,13 +96,15 @@ app.get('/api/user', (req, res) => {
 });
 
 // Create Photo Picker Session
+// Store session IDs in memory (this will be lost if the server restarts)
+const userSessions = new Map<string, string>(); // Maps user ID to session ID
+
 app.get('/api/session', async (req, res) => {
   if (!req.user) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
   try {
-    // Create a new session
     const sessionResponse = await fetch('https://photospicker.googleapis.com/v1/sessions', {
       method: 'POST',
       headers: {
@@ -117,7 +119,9 @@ app.get('/api/session', async (req, res) => {
       return res.status(400).json({ error: 'Failed to create a valid session ID' });
     }
 
-    // Correct Picker UI URL format
+    // Store the session ID for this user
+    userSessions.set(req.user.profile.id, sessionData.id);
+
     const pickerUrl = `https://photos.google.com/integration/picker/session/${sessionData.id}`;
 
     res.json({
@@ -130,31 +134,18 @@ app.get('/api/session', async (req, res) => {
   }
 });
 
-// Fetch Selected Images
 app.get('/api/images', async (req, res) => {
   if (!req.user) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
+  // Retrieve the existing session ID for this user
+  const sessionId = userSessions.get(req.user.profile.id);
+  if (!sessionId) {
+    return res.status(400).json({ error: 'No active session. Please start a new session first.' });
+  }
+
   try {
-    // First, retrieve an active session ID
-    const sessionResponse = await fetch('https://photospicker.googleapis.com/v1/sessions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${(req.user as any).token}`,
-      },
-    });
-
-    const sessionData = await sessionResponse.json();
-
-    if (!sessionData.id) {
-      return res.status(400).json({ error: 'Failed to create a valid session ID' });
-    }
-
-    const sessionId = sessionData.id;
-
-    // Now use this session ID to fetch images
     const imagesResponse = await fetch(`https://photospicker.googleapis.com/v1/mediaItems?sessionId=${sessionId}`, {
       method: 'GET',
       headers: {
