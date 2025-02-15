@@ -157,6 +157,29 @@ app.get('/api/images', async (req, res) => {
 
     const imagesData = await imagesResponse.json();
 
+    console.log('imagesData:');
+    console.log(imagesData);
+    for (const mediaItem of imagesData.mediaItems) {
+      console.log(mediaItem);
+
+      const baseUrl = mediaItem.mediaFile.baseUrl;
+
+      console.log('fetch from: ', baseUrl);
+      fetch(baseUrl, {
+        method: 'GET',
+        headers: new Headers({
+          'Authorization': `Bearer ${req.user.token}`,
+        }),
+      }).then((response: any) => {
+          console.log('Response for imageData:', response.ok);
+          console.log(response);
+          response.arrayBuffer().then((buf: any) => {
+            const bytes = new Uint8Array(buf)
+            console.log('bytes:', bytes);
+          })
+      });
+    }
+
     res.json(imagesData);
   } catch (error) {
     console.error('Error fetching images:', error);
