@@ -164,6 +164,37 @@ app.get('/api/images', async (req, res) => {
   }
 });
 
+app.get("/api/image-proxy", async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  const imageUrl = req.query.url as string;
+  if (!imageUrl) {
+    return res.status(400).json({ error: "Missing image URL" });
+  }
+
+  try {
+    const response = await fetch(imageUrl, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${(req.user as any).token}`,
+      },
+    });
+
+    if (!response.ok) {
+      console.error("Failed to fetch image:", response.statusText);
+      return res.status(response.status).json({ error: "Failed to fetch image" });
+    }
+
+    // Stream the image back to the client
+    res.set("Content-Type", response.headers.get("Content-Type") || "image/jpeg");
+    response.body?.pipe(res);
+  } catch (error) {
+    console.error("Error fetching image:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 // ✅ Serve static files from "public"
 app.use(express.static(path.join(__dirname, "../public")));
 

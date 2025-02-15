@@ -54,19 +54,16 @@ const ImageList = () => {
       <h2 className="text-lg font-bold mb-4">Selected Photos</h2>
       {loading && <p>Loading...</p>}
       {error && <p className="text-red-500">{error}</p>}
-
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {mediaItems.map((mediaItem) => {
-          // const imgUrl = `${mediaItem.mediaFile.baseUrl}=w300-h300`; // Ensure correct URL formatting
-          const imgUrl = `${mediaItem.mediaFile.baseUrl}`; // Ensure correct URL formatting
-
+          const proxyUrl = `/api/image-proxy?url=${encodeURIComponent(mediaItem.mediaFile.baseUrl)}`;
           return (
             <img
               key={mediaItem.id}
-              src={imgUrl}
+              src={proxyUrl}
               alt={mediaItem.mediaFile.filename}
               className="w-full h-auto rounded-lg shadow-md"
-              onError={(e) => console.error(`Image failed to load: ${imgUrl}`)}
+              onError={(e) => console.error(`Image failed to load: ${proxyUrl}`)}
             />
           );
         })}
