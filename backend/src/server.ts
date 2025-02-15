@@ -117,11 +117,11 @@ app.get('/api/session', async (req, res) => {
       return res.status(400).json({ error: 'Failed to create a valid session ID' });
     }
 
-    // Construct the Picker UI URL
-    const pickerUrl = `https://photos.google.com/picker/${sessionData.id}`;
+    // Correct Picker UI URL format
+    const pickerUrl = `https://photos.google.com/integration/picker/session/${sessionData.id}`;
 
     res.json({
-      message: 'Session created. Please visit the following URL to select media:',
+      message: 'Session created. Open this URL to select media:',
       pickerUrl,
     });
   } catch (error) {
