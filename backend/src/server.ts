@@ -164,8 +164,8 @@ app.get('/api/images', async (req, res) => {
   }
 });
 
-// Serve static files from "public/build"
-app.use(express.static(path.join(__dirname, "public/build")));
+// ✅ Serve static files from "public"
+app.use(express.static(path.join(__dirname, "../public")));
 
 // ✅ Serve index.html for non-API requests
 app.get("*", (req, res) => {
