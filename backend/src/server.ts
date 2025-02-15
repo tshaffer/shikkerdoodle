@@ -1,4 +1,5 @@
 import express from 'express';
+import path from "path";
 import session from 'express-session';
 import passport from 'passport';
 import bodyParser from 'body-parser';
@@ -161,6 +162,14 @@ app.get('/api/images', async (req, res) => {
     console.error('Error fetching images:', error);
     res.status(500).json({ error: 'Failed to fetch images' });
   }
+});
+
+// Serve static files from "public/build"
+app.use(express.static(path.join(__dirname, "public/build")));
+
+// ✅ Serve index.html for non-API requests
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../public", "index.html"));
 });
 
 // Start Server

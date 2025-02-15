@@ -1,8 +1,13 @@
 import React from 'react';
 
-const App: React.FC = () => {
-  console.log('App rendered');
-  return <h1>Hello World</h1>;
-};
+import Login from "./Login";
+
+function App() {
+  return (
+    <div className="flex justify-center items-center h-screen">
+      <Login />
+    </div>
+  );
+}
 
 export default App;
