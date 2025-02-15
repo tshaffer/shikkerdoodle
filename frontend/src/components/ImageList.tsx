@@ -39,7 +39,6 @@ const ImageList = () => {
         setMediaItems(data.mediaItems);
         console.log('MediaItems:');
         console.log(data.mediaItems);
-        debugger;
       } else {
         setError("No images found. Try selecting photos again.");
       }
