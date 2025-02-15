@@ -57,18 +57,19 @@ const ImageList = () => {
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {mediaItems.map((mediaItem) => {
-          console.log(mediaItem);
-          console.log(mediaItem.mediaFile);
+          // const imgUrl = `${mediaItem.mediaFile.baseUrl}=w300-h300`; // Ensure correct URL formatting
+          const imgUrl = `${mediaItem.mediaFile.baseUrl}`; // Ensure correct URL formatting
+
           return (
             <img
               key={mediaItem.id}
-              src={`${mediaItem.mediaFile.baseUrl}=w300`}
-              alt="Selected"
+              src={imgUrl}
+              alt={mediaItem.mediaFile.filename}
               className="w-full h-auto rounded-lg shadow-md"
+              onError={(e) => console.error(`Image failed to load: ${imgUrl}`)}
             />
-          )
-        }
-        )}
+          );
+        })}
       </div>
 
       <button
