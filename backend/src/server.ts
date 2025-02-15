@@ -118,26 +118,42 @@ app.get('/api/session', async (req, res) => {
 
 // Fetch Selected Images
 app.get('/api/images', async (req, res) => {
-
-  console.log('/api/images invoked');
-  console.log('req.user:', req.user);
   if (!req.user) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
-  console.log('token', (req.user as any).token);
-  
   try {
-    const response = await fetch(`https://photospicker.googleapis.com/v1/mediaItems`, {
+    // First, retrieve an active session ID
+    const sessionResponse = await fetch('https://photospicker.googleapis.com/v1/sessions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${(req.user as any).token}`,
+      },
+    });
+
+    const sessionData = await sessionResponse.json();
+
+    if (!sessionData.id) {
+      return res.status(400).json({ error: 'Failed to create a valid session ID' });
+    }
+
+    const sessionId = sessionData.id;
+
+    // Now use this session ID to fetch images
+    const imagesResponse = await fetch(`https://photospicker.googleapis.com/v1/mediaItems?sessionId=${sessionId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${(req.user as any).token}`,
       },
     });
-    const data = await response.json();
-    res.json(data);
+
+    const imagesData = await imagesResponse.json();
+
+    res.json(imagesData);
   } catch (error) {
+    console.error('Error fetching images:', error);
     res.status(500).json({ error: 'Failed to fetch images' });
   }
 });
